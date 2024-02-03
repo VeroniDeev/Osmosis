@@ -21,7 +21,7 @@ impl Instagram {
         }
     }
 
-    pub async fn start(&mut self) -> Result<(), reqwest::Error> {
+    pub async fn start(&mut self, phonenumber: &str) -> Result<(), reqwest::Error> {
         let mut headers = HeaderMap::new();
         headers.insert("Accept-Language", HeaderValue::from_static("en-US"));
         headers.insert(
@@ -36,7 +36,7 @@ impl Instagram {
         headers.insert("X-FB-HTTP-Engine", HeaderValue::from_static("Liger"));
         headers.insert("Connection", HeaderValue::from_static("close"));
 
-        let signature = self.generate_signature(self.generate_data("+33781403245"));
+        let signature = self.generate_signature(self.generate_data(phonenumber));
 
         let client = reqwest::Client::new();
         let response = client
@@ -45,27 +45,24 @@ impl Instagram {
             .headers(headers)
             .send()
             .await?;
+        let lamb = response.bytes().await.expect("msg");
+        let by = String::from_utf8_lossy(&lamb);
+        println!("{}", by);
+        let decoded_bytes =
+            hex::decode(by.replace("\\x", "")).expect("Erreur de décodage hexadécimal");
+        println!("{:?}", decoded_bytes);
 
-        if response.status().is_success() {
-            let json_response = response.text().await?;
+        // if response.status().is_success() {
+        //     let json_response = response.text().await?;
+        //     println!("{}", json_response);
 
-            println!("{}", json_response.trim().is_empty());
+        //     let inter: Value = serde_json::from_str(json_response.as_str()).expect("msg");
 
-            let transform: Result<Value, _> = serde_json::from_slice(json_response.as_bytes());
-            println!("{:?}", transform);
-
-            match transform {
-                Ok(value) => {
-                    println!("{:?}", value);
-                }
-                Err(err) => {
-                    eprintln!("Erreur de désérialisation : {:?}", err);
-                }
-            }
-        } else {
-            println!("Erreur : {:?}", response.status());
-            println!("{}", response.text().await?);
-        }
+        //     let transform: Value = serde_json::from_str(&json_response.as_str()).expect("msg");
+        // } else {
+        //     println!("Erreur : {:?}", response.status());
+        //     println!("{}", response.text().await?);
+        // }
 
         Ok(())
     }
